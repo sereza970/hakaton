@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Защита бамперов</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: one-screen slider. Text block left, bevelled photo frame right (stacked on phones). Control panel: back / support / next. Accent colour is the --accent variable (changed by the "Стиль" button). */
+:root {
+  --bg: #000000;
+  --ink: #f5f5f7;
+  --mute: #a8a8b0;
+  --dim: #6c6c74;
+  --accent: #ffffff;
+  --accent-rgb: 255, 255, 255;
+  --on-accent: #000000;
+  --glow: 205, 205, 212;
+  --font: "Montserrat", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-left: max(clamp(16px, 4.5vw, 72px), env(safe-area-inset-left, 0px));
+  padding-right: max(clamp(16px, 4.5vw, 72px), env(safe-area-inset-right, 0px));
+  background-image:
+    radial-gradient(60% 55% at 72% 48%, rgba(120,120,128,.14), transparent 70%),
+    radial-gradient(40% 40% at 10% 90%, rgba(90,90,98,.09), transparent 70%);
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+/* grey glow coming from the screen edges */
+.glow { position: fixed; inset: 0; pointer-events: none; z-index: 40;
+  box-shadow: inset 0 0 70px 6px rgba(var(--glow), .26), inset 0 0 230px 20px rgba(var(--glow), .13);
+  animation: breathe 6s ease-in-out infinite; }
+.glow::before { content: ""; position: absolute; inset: 0;
+  background:
+    linear-gradient(to right, rgba(var(--glow), .20), transparent 9%),
+    linear-gradient(to left, rgba(var(--glow), .20), transparent 9%),
+    linear-gradient(to bottom, rgba(var(--glow), .14), transparent 12%),
+    linear-gradient(to top, rgba(var(--glow), .20), transparent 14%); }
+@keyframes breathe { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
+
+/* top bar */
+.top { flex: none; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; position: relative; z-index: 45; }
+.brand { font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.brand b { color: var(--accent); font-weight: 800; }
+.meta { display: flex; align-items: center; gap: 18px; flex: none; }
+.progress { display: flex; gap: 6px; }
+.progress button { width: 26px; height: 20px; padding: 0; border: 0; background: transparent; cursor: pointer; position: relative; }
+.progress button::after { content: ""; position: absolute; left: 0; right: 0; top: 9px; height: 2px; background: rgba(255,255,255,.22); transition: background .3s, height .3s, top .3s; }
+.progress button.on::after { background: var(--accent); height: 3px; top: 8.5px; }
+.progress button:hover::after { background: rgba(var(--accent-rgb), .7); }
+.count { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--mute); font-variant-numeric: tabular-nums; }
+.count b { color: var(--accent); }
+
+/* stage */
+.stage { flex: 1; min-height: 0; position: relative; z-index: 2; }
+.slide { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(24px, 5vw, 88px); align-items: center; visibility: hidden; pointer-events: none; }
+.slide.active, .slide.leaving { visibility: visible; }
+.slide.active { pointer-events: auto; }
+.copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: clamp(14px, 2.4vh, 26px); max-height: 100%; }
+.kicker { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: var(--mute); display: flex; align-items: center; gap: 14px; }
+.kicker::before { content: ""; width: 38px; height: 2px; background: var(--accent); }
+h1 { margin: 0; font-weight: 800; font-size: clamp(1.9rem, 3.5vw, 3.6rem); line-height: 1.08; letter-spacing: -.02em; color: #8d8d95; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--accent); }
+.lead { margin: 0; max-width: 34em; font-size: clamp(.98rem, 1.25vw, 1.2rem); line-height: 1.65; color: var(--mute); font-weight: 400; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.chips li { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #e4e4e8; border: 1px solid rgba(var(--accent-rgb), .42); padding: 8px 12px; }
+.points { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: 34em; }
+.points li { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 16px; font-size: clamp(.95rem, 1.2vw, 1.12rem); line-height: 1.5; color: #dcdce1; }
+.points li::before { content: ""; width: 10px; height: 10px; margin-top: .42em; background: var(--accent); clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px); }
+
+/* media */
+.mwrap { min-width: 0; height: 100%; display: flex; align-items: center; justify-content: center; }
+.media { --c: 34px; --b: 1.5px; position: relative; height: 100%; max-height: 640px; max-width: 100%; aspect-ratio: var(--ar, 5 / 4); }
+.frame { position: absolute; inset: 0; background: rgba(var(--accent-rgb), .62);
+  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c)); }
+.frame i { position: absolute; inset: var(--b); background: #101012; overflow: hidden;
+  clip-path: polygon(calc(var(--c) - var(--b) * .586) 0, 100% 0, 100% calc(100% - var(--c) + var(--b) * .586), calc(100% - var(--c) + var(--b) * .586) 100%, 0 100%, 0 calc(var(--c) - var(--b) * .586)); }
+.frame i img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; display: block; }
+.frame i::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 70px rgba(0,0,0,.45); }
+.media--portrait { --ar: 2 / 3.05; }
+.media--portrait .frame i::after, .media--scene .frame i::after { box-shadow: none; background: linear-gradient(to top, rgba(0,0,0,.6), transparent 48%), linear-gradient(to bottom, rgba(0,0,0,.26), transparent 30%); }
+.media--scene { --ar: 5 / 4; }
+.car { position: absolute; left: 50%; max-width: none; height: auto; transform: translateX(-50%); filter: drop-shadow(0 26px 24px rgba(0,0,0,.65)); pointer-events: none; }
+.car.warm { filter: sepia(.22) saturate(.92) drop-shadow(0 26px 24px rgba(0,0,0,.6)); }
+.media--portrait .car { width: 156%; bottom: -2%; }
+.media--scene .car { width: 90%; bottom: 8%; }
+
+/* buttons: black, accent border, bevelled corners */
+.btn { --c: 15px; --b: 2px; --bc: var(--accent);
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  height: 54px; padding: 0 30px; border: 0; background: var(--bc); color: #fff; cursor: pointer;
+  font: 700 13px/1 var(--font); letter-spacing: .1em; text-transform: uppercase; text-decoration: none; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent; transition: transform .12s, color .2s, background .2s; }
+.btn::before { content: ""; position: absolute; inset: var(--b); background: #000; transition: background .2s; }
+.btn > * { position: relative; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn--next, .btn--sup, .btn--style { clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c)); }
+.btn--next::before, .btn--sup::before, .btn--style::before { clip-path: polygon(calc(var(--c) - var(--b) * .586) 0, 100% 0, 100% calc(100% - var(--c) + var(--b) * .586), calc(100% - var(--c) + var(--b) * .586) 100%, 0 100%, 0 calc(var(--c) - var(--b) * .586)); }
+.btn--back { clip-path: polygon(0 0, calc(100% - var(--c)) 0, 100% var(--c), 100% 100%, var(--c) 100%, 0 calc(100% - var(--c))); }
+.btn--back::before { clip-path: polygon(0 0, calc(100% - var(--c) + var(--b) * .586) 0, 100% calc(var(--c) - var(--b) * .586), 100% 100%, calc(var(--c) - var(--b) * .586) 100%, 0 calc(100% - var(--c) + var(--b) * .586)); }
+.btn--sup { --bc: #8d8d95; color: #d6d6db; font-size: 12px; }
+.btn--style { --c: 10px; height: 38px; padding: 0 16px; gap: 10px; font-size: 11px; --bc: rgba(var(--accent-rgb), .75); }
+.btn--style .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px #000, 0 0 0 3px rgba(255,255,255,.4); }
+.btn:hover:not(:disabled), .btn:focus-visible { color: var(--on-accent); outline: none; background: var(--accent); }
+.btn:hover:not(:disabled)::before, .btn:focus-visible::before { background: var(--accent); }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .32; cursor: default; }
+
+.panel { flex: none; position: relative; z-index: 5; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; padding-block: 16px 22px; }
+.panel .btn--back { justify-self: start; }
+.panel .btn--next { justify-self: end; }
+
+/* dialogs */
+.modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.sheet { --c: 28px; --b: 1.5px; position: relative; width: min(480px, 100%); background: rgba(var(--accent-rgb), .7);
+  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c)); }
+.sheet-in { margin: var(--b); background: #0b0b0d; padding: 34px 30px 30px; display: flex; flex-direction: column; gap: 16px;
+  clip-path: polygon(calc(var(--c) - var(--b) * .586) 0, 100% 0, 100% calc(100% - var(--c) + var(--b) * .586), calc(100% - var(--c) + var(--b) * .586) 100%, 0 100%, 0 calc(var(--c) - var(--b) * .586)); }
+.sheet h2 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -.01em; }
+.sheet p { margin: 0; color: var(--mute); line-height: 1.6; font-size: .95rem; }
+.sheet .addr { font-weight: 700; font-size: 1.1rem; color: #fff; user-select: all; word-break: break-all; }
+.sheet .row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.pop { position: fixed; z-index: 55; top: calc(env(safe-area-inset-top, 0px) + 64px); right: max(clamp(16px, 4.5vw, 72px), env(safe-area-inset-right, 0px)); width: min(308px, calc(100vw - 32px)); }
+.pop .sheet { width: 100%; --c: 22px; }
+.pop .sheet-in { padding: 22px 20px 20px; gap: 14px; }
+.pop h2 { font-size: 1rem; letter-spacing: .12em; text-transform: uppercase; }
+.swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+.sw { width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 2px solid transparent; background: var(--c1); cursor: pointer; position: relative; outline-offset: 3px; }
+.sw::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid transparent; transition: border-color .2s; }
+.sw.on::after { border-color: #fff; }
+.sw:focus-visible { outline: 2px solid #fff; }
+.wheel { position: relative; width: 168px; height: 168px; margin: 2px auto 0; border-radius: 50%; touch-action: none; cursor: crosshair;
+  background: radial-gradient(circle closest-side, #fff 0%, rgba(255,255,255,0) 100%), conic-gradient(from 0deg, hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(360 100% 50%)); }
+.strip { position: relative; height: 20px; margin: 4px 10px 0; border-radius: 10px; touch-action: none; cursor: ew-resize; background: linear-gradient(to right, #000, #fff); box-shadow: 0 0 0 1px rgba(255,255,255,.3); }
+.knob { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.7), 0 2px 8px rgba(0,0,0,.6); pointer-events: none; background: transparent; }
+.strip .knob { top: 50%; }
+.hexrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--mute); text-transform: uppercase; }
+.hexrow output { color: #fff; font-variant-numeric: tabular-nums; user-select: all; }
+
+@media (max-width: 820px) {
+  .top { height: 54px; }
+  .brand { letter-spacing: .12em; font-size: 10px; }
+  .progress { display: none; }
+  .meta { gap: 12px; }
+  .btn--style { padding: 0 12px; }
+  .slide { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 36%) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .mwrap { order: -1; }
+  .copy { gap: 12px; overflow-y: auto; scrollbar-width: none; align-self: stretch; justify-content: flex-start; }
+  .copy::-webkit-scrollbar { display: none; }
+  h1 { font-size: clamp(1.4rem, 6.1vw, 2.05rem); }
+  .lead { font-size: .92rem; line-height: 1.55; }
+  .points { gap: 10px; }
+  .points li { font-size: .9rem; line-height: 1.4; }
+  .kicker { font-size: 10px; }
+  .chips li { font-size: 10px; padding: 6px 10px; }
+  .media { --c: 22px; --ar: 16 / 10; width: 100%; height: 100%; max-height: none; }
+  .media .car { width: auto; height: 92%; bottom: -3%; }
+  .media--scene .car { height: 86%; bottom: 3%; }
+  .panel { grid-template-columns: 1fr 1.9fr 1fr; gap: 8px; padding-block: 10px 14px; }
+  .panel .btn--back, .panel .btn--next { justify-self: stretch; }
+  .btn { height: 50px; padding: 0 8px; font-size: 11px; gap: 6px; letter-spacing: .06em; --c: 12px; }
+  .btn svg { width: 13px; height: 13px; }
+  .btn--sup { white-space: normal; line-height: 1.2; text-align: center; font-size: 10.5px; }
+  .btn--style { height: 36px; padding: 0 12px; font-size: 10px; }
+}
+@media (max-width: 820px) and (max-height: 700px) { .slide { grid-template-rows: minmax(0, 30%) minmax(0, 1fr); } .lead { font-size: .86rem; } }
+@media (prefers-reduced-motion: reduce) { .glow { animation: none; } }
+</style></head><body>
+
+<div class="glow" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="brand"><b>AISI 304</b> · Защита бамперов</div>
+  <div class="meta">
+    <div class="progress" id="progress" role="tablist" aria-label="Слайды"></div>
+    <div class="count"><b id="cur">01</b> / <span id="tot">07</span></div>
+    <button class="btn btn--style" id="styleBtn" type="button" aria-haspopup="dialog" aria-expanded="false"><i class="dot"></i><span>Стиль</span></button>
+  </div>
+</header>
+
+<main class="stage" id="stage" aria-live="polite">
+
+  <section class="slide active" aria-label="Слайд 1">
+    <div class="copy">
+      <p class="kicker" data-p>О производстве</p>
+      <h1 data-p>Мы делаем <em>надёжную защиту бамперов</em> внедорожников</h1>
+      <p class="lead" data-p>Собственное производство элементов силового и декоративного тюнинга из нержавеющей стали AISI 304 и металла с порошковым покрытием. Готовые решения для JAC T9 и Haval H3 и разработка под заказ.</p>
+    </div>
+    <div class="mwrap"><div class="media media--portrait" data-p>
+      <div class="frame"><i><img src="img/forest.jpg" alt="Лесная дорога" decoding="async"></i></div>
+      <img class="car" src="img/jac.webp" alt="Внедорожник JAC с защитой переднего бампера" decoding="async">
+    </div></div>
+  </section>
+
+  <section class="slide" aria-label="Слайд 2">
+    <div class="copy">
+      <p class="kicker" data-p>О компании</p>
+      <h1 data-p>Специализируемся на <em>китайских внедорожниках</em> и пикапах</h1>
+      <p class="lead" data-p>Мы производим элементы автомобильного тюнинга. Специализированных решений для китайских автомобилей пока немного, поэтому мы развиваем это направление и постепенно расширяем ассортимент.</p>
+    </div>
+    <div class="mwrap"><div class="media media--scene" data-p>
+      <div class="frame"><i><img src="img/bg_stream.jpg" alt="Лесной ручей" decoding="async"></i></div>
+      <img class="car" src="img/jac.webp" alt="Внедорожник JAC на лесной тропе" decoding="async">
+    </div></div>
+  </section>
+
+  <section class="slide" aria-label="Слайд 3">
+    <div class="copy">
+      <p class="kicker" data-p>Продукция</p>
+      <h1 data-p>Защита <em>передних и задних</em> бамперов</h1>
+      <p class="lead" data-p>Основной продукт: защита из нержавеющей стали AISI 304 с зеркальной полировкой и из чёрного металла с порошковым покрытием. Готовые комплекты разработаны для двух моделей.</p>
+      <ul class="chips" data-p><li>AISI 304</li><li>Зеркальная полировка</li><li>Порошковое покрытие</li><li>JAC T9</li><li>Haval H3</li></ul>
+    </div>
+    <div class="mwrap"><div class="media media--scene" data-p><div class="frame"><i><img src="img/kit.jpg" alt="Комплект защиты бампера" decoding="async"></i></div></div></div>
+  </section>
+
+  <section class="slide" aria-label="Слайд 4">
+    <div class="copy">
+      <p class="kicker" data-p>Преимущества</p>
+      <h1 data-p>Качество и установка <em>без доработок</em> кузова</h1>
+      <ul class="points" data-p>
+        <li>Качественные материалы и внимание к деталям производства</li>
+        <li>Установка без сверления и доработки кузова автомобиля</li>
+        <li>Комплект можно купить отдельно или заказать установку под ключ</li>
+      </ul>
+    </div>
+    <div class="mwrap"><div class="media media--scene" data-p><div class="frame"><i><img src="img/tube.jpg" alt="Деталь защиты бампера крупным планом" decoding="async"></i></div></div></div>
+  </section>
+
+  <section class="slide" aria-label="Слайд 5">
+    <div class="copy">
+      <p class="kicker" data-p>Преимущества</p>
+      <h1 data-p>Доставляем <em>по всей России</em></h1>
+      <ul class="points" data-p>
+        <li>Возможность доставки продукции по всей России</li>
+        <li>Специализация на китайском автопроме</li>
+      </ul>
+      <p class="lead" data-p>Для владельцев внедорожников и пикапов, которые любят охоту, рыбалку и поездки по бездорожью.</p>
+    </div>
+    <div class="mwrap"><div class="media media--portrait" data-p>
+      <div class="frame"><i><img src="img/bg_mountains.jpg" alt="Горы" style="object-position: 50% 30%" decoding="async"></i></div>
+      <img class="car" src="img/jac.webp" alt="Внедорожник JAC на фоне гор" decoding="async">
+    </div></div>
+  </section>
+
+  <section class="slide" aria-label="Слайд 6">
+    <div class="copy">
+      <p class="kicker" data-p>Индивидуальное изготовление</p>
+      <h1 data-p>Разработаем защиту <em>под вашу модель</em></h1>
+      <p class="lead" data-p>Если вашей модели нет среди готовых решений, рассмотрим индивидуальный запрос, разработаем и изготовим защиту под конкретный автомобиль. В дальнейшем планируем выпускать и другие элементы автомобильного тюнинга.</p>
+    </div>
+    <div class="mwrap"><div class="media media--scene" data-p><div class="frame"><i><img src="img/brackets.jpg" alt="Крепёж и элементы защиты бампера" decoding="async"></i></div></div></div>
+  </section>
+
+  <section class="slide" aria-label="Слайд 7">
+    <div class="copy">
+      <p class="kicker" data-p>Контакты</p>
+      <h1 data-p>Расскажите <em>о своём автомобиле</em></h1>
+      <p class="lead" data-p>Напишите в поддержку: подскажем по готовым комплектам, доставке и установке, обсудим индивидуальное изготовление.</p>
+    </div>
+    <div class="mwrap"><div class="media media--portrait" data-p>
+      <div class="frame"><i><img src="img/bg_sand.jpg" alt="Пустыня" style="object-position: 50% 72%" decoding="async"></i></div>
+      <img class="car warm" src="img/jac.webp" alt="Внедорожник JAC в пустыне" decoding="async">
+    </div></div>
+  </section>
+
+</main>
+
+<nav class="panel" aria-label="Навигация по слайдам">
+  <button class="btn btn--back" id="back" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 8H2M7 3L2 8l5 5"/></svg><span>Назад</span></button>
+  <button class="btn btn--sup" id="support" type="button"><span>Написать в поддержку</span></button>
+  <button class="btn btn--next" id="next" type="button"><span id="nextLabel">Далее</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 8h12M9 3l5 5-5 5"/></svg></button>
+</nav>
+
+<div class="pop" id="pop" hidden role="dialog" aria-label="Стиль сайта">
+  <div class="sheet"><div class="sheet-in">
+    <h2>Цвет акцента</h2>
+    <div class="swatches" id="swatches">
+      <button class="sw" type="button" data-hex="#ffffff" style="--c1:#ffffff" aria-label="Белый"></button>
+      <button class="sw" type="button" data-hex="#d4af37" style="--c1:#d4af37" aria-label="Золотой"></button>
+      <button class="sw" type="button" data-hex="#b026ff" style="--c1:#b026ff" aria-label="Неоново-фиолетовый"></button>
+    </div>
+    <div class="wheel" id="wheel" aria-label="Цветовой круг"><div class="knob" id="wheelKnob"></div></div>
+    <div class="strip" id="strip" aria-label="Яркость"><div class="knob" id="stripKnob"></div></div>
+    <div class="hexrow"><span>Свой цвет</span><output id="hex">#FFFFFF</output></div>
+  </div></div>
+</div>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="sheet"><div class="sheet-in">
+    <h2 id="mt">Написать в поддержку</h2>
+    <p>Опишите автомобиль и задачу. Ответим и подскажем по комплектам или индивидуальному изготовлению.</p>
+    <div class="addr" id="addr">support@example.com</div>
+    <div class="row">
+      <button class="btn btn--next" id="copy" type="button"><span>Скопировать</span></button>
+      <button class="btn btn--back" id="close" type="button"><span>Закрыть</span></button>
+    </div>
+  </div></div>
+</div>
+
+<script>
+(function () {
+  var SUPPORT_EMAIL = "support@example.com"; /* замените на реальный адрес */
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var N = slides.length, cur = 0, running = [], animating = false;
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var $ = function (id) { return document.getElementById(id); };
+  var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+  $("tot").textContent = pad(N);
+  $("addr").textContent = SUPPORT_EMAIL;
+
+  var bars = $("progress");
+  slides.forEach(function (_, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.setAttribute("aria-label", "Слайд " + (i + 1));
+    b.addEventListener("click", function () { go(i); });
+    bars.appendChild(b);
+  });
+
+  function ui() {
+    $("cur").textContent = pad(cur + 1);
+    Array.prototype.forEach.call(bars.children, function (b, i) { b.classList.toggle("on", i === cur); });
+    $("back").disabled = cur === 0;
+    $("nextLabel").textContent = cur === N - 1 ? "В начало" : "Далее";
+    try { history.replaceState(null, "", "#slide-" + (cur + 1)); } catch (e) {}
+  }
+
+  function parts(s) { return Array.prototype.slice.call(s.querySelectorAll("[data-p]")); }
+
+  function go(n, dir) {
+    if (n === cur || n < 0 || n >= N) return;
+    dir = dir || (n > cur ? 1 : -1);
+    var out = slides[cur], inn = slides[n];
+    var wasAnimating = animating;
+    running.forEach(function (a) { a.cancel(); }); running = [];
+    slides.forEach(function (s) { s.classList.remove("active", "leaving"); });
+    cur = n; inn.classList.add("active"); ui();
+    if (reduce || !inn.animate) { return; }
+    animating = true;
+    var exitMs = 340, enterMs = 720, last = null;
+    if (!wasAnimating) {
+      out.classList.add("leaving");
+      parts(out).forEach(function (p, i) {
+        var a = p.animate(
+          [{ transform: "translateX(0)", opacity: 1 }, { transform: "translateX(" + (-dir * 90) + "px)", opacity: 0 }],
+          { duration: exitMs, delay: i * 30, easing: "cubic-bezier(.55,0,1,.45)", fill: "forwards" });
+        running.push(a); last = a;
+      });
+      if (last) last.onfinish = function () { out.classList.remove("leaving"); };
+    }
+    var base = wasAnimating ? 0 : exitMs * 0.6;
+    var inParts = parts(inn);
+    inParts.forEach(function (p, i) {
+      var isMedia = p.classList.contains("media");
+      var a = p.animate(
+        [{ transform: "translateX(" + (dir * (isMedia ? 160 : 100)) + "px)" + (isMedia ? " scale(.95)" : ""), opacity: 0 },
+         { transform: "translateX(0) scale(1)", opacity: 1 }],
+        { duration: enterMs, delay: base + i * 80, easing: "cubic-bezier(.16,1,.3,1)", fill: "backwards" });
+      running.push(a);
+      a.onfinish = function () { if (i === inParts.length - 1) animating = false; };
+    });
+  }
+
+  function next() { go(cur === N - 1 ? 0 : cur + 1, 1); }
+  function prev() { go(cur - 1, -1); }
+  $("next").addEventListener("click", next);
+  $("back").addEventListener("click", prev);
+
+  /* ---------- accent colour (CSS variable --accent) ---------- */
+  var root = document.documentElement, pop = $("pop"), styleBtn = $("styleBtn");
+  var hsv = { h: 0, s: 0, v: 1 };
+  function hsv2hex(h, s, v) {
+    var f = function (n) { var k = (n + h / 60) % 6; var x = v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); return Math.round(x * 255); };
+    return "#" + [f(5), f(3), f(1)].map(function (x) { return (x < 16 ? "0" : "") + x.toString(16); }).join("");
+  }
+  function hex2hsv(hex) {
+    var n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, h = 0;
+    if (d) { if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+    return { h: h, s: mx ? d / mx : 0, v: mx };
+  }
+  function applyAccent(hex, save) {
+    var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    root.style.setProperty("--accent", hex);
+    root.style.setProperty("--accent-rgb", r + ", " + g + ", " + b);
+    root.style.setProperty("--on-accent", (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#000000" : "#ffffff");
+    $("hex").textContent = hex.toUpperCase();
+    Array.prototype.forEach.call($("swatches").children, function (s) { s.classList.toggle("on", s.getAttribute("data-hex") === hex); });
+    if (save) { try { localStorage.setItem("accent", hex); } catch (e) {} }
+  }
+  function syncKnobs() {
+    var R = $("wheel").clientWidth / 2, a = hsv.h * Math.PI / 180;
+    $("wheelKnob").style.left = (R + R * hsv.s * Math.sin(a)) + "px";
+    $("wheelKnob").style.top = (R - R * hsv.s * Math.cos(a)) + "px";
+    $("stripKnob").style.left = (hsv.v * 100) + "%";
+    $("strip").style.background = "linear-gradient(to right, #000, " + hsv2hex(hsv.h, hsv.s, 1) + ")";
+  }
+  function setFromHsv(save) { var hex = hsv2hex(hsv.h, hsv.s, hsv.v); applyAccent(hex, save); syncKnobs(); }
+  function setFromHex(hex, save) { hsv = hex2hsv(hex); applyAccent(hex, save); if (!pop.hidden) syncKnobs(); }
+  function drag(el, fn) {
+    var on = false;
+    el.addEventListener("pointerdown", function (e) { on = true; el.setPointerCapture(e.pointerId); fn(e); e.preventDefault(); });
+    el.addEventListener("pointermove", function (e) { if (on) fn(e); });
+    el.addEventListener("pointerup", function () { on = false; });
+    el.addEventListener("pointercancel", function () { on = false; });
+  }
+  drag($("wheel"), function (e) {
+    var r = $("wheel").getBoundingClientRect(), R = r.width / 2;
+    var dx = e.clientX - (r.left + R), dy = e.clientY - (r.top + R);
+    hsv.h = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+    hsv.s = Math.min(1, Math.sqrt(dx * dx + dy * dy) / R);
+    if (hsv.v < 0.25) hsv.v = 1;
+    setFromHsv(true);
+  });
+  drag($("strip"), function (e) {
+    var r = $("strip").getBoundingClientRect();
+    hsv.v = Math.max(0.08, Math.min(1, (e.clientX - r.left) / r.width));
+    setFromHsv(true);
+  });
+  Array.prototype.forEach.call($("swatches").children, function (s) {
+    s.addEventListener("click", function () { setFromHex(s.getAttribute("data-hex"), true); });
+  });
+  function openPop() { pop.hidden = false; styleBtn.setAttribute("aria-expanded", "true"); syncKnobs(); }
+  function closePop() { pop.hidden = true; styleBtn.setAttribute("aria-expanded", "false"); }
+  styleBtn.addEventListener("click", function (e) { e.stopPropagation(); pop.hidden ? openPop() : closePop(); });
+  pop.addEventListener("click", function (e) { e.stopPropagation(); });
+  document.addEventListener("click", function () { if (!pop.hidden) closePop(); });
+  var saved = null; try { saved = localStorage.getItem("accent"); } catch (e) {}
+  setFromHex(/^#[0-9a-f]{6}$/i.test(saved || "") ? saved.toLowerCase() : "#ffffff", false);
+
+  /* ---------- input ---------- */
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { if (!$("modal").hidden) closeModal(); else if (!pop.hidden) closePop(); return; }
+    if (!$("modal").hidden) return;
+    if (e.key === "ArrowRight" || e.key === "PageDown") next();
+    if (e.key === "ArrowLeft" || e.key === "PageUp") prev();
+  });
+  var sx = 0, sy = 0, swipeOk = true;
+  document.addEventListener("touchstart", function (e) {
+    swipeOk = !e.target.closest(".pop");
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener("touchend", function (e) {
+    if (!swipeOk || !$("modal").hidden) return;
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) { dx < 0 ? next() : prev(); }
+  }, { passive: true });
+
+  function openModal() { closePop(); $("modal").hidden = false; $("copy").focus(); }
+  function closeModal() { $("modal").hidden = true; $("support").focus(); }
+  $("support").addEventListener("click", function (e) { e.stopPropagation(); openModal(); });
+  $("close").addEventListener("click", closeModal);
+  $("modal").addEventListener("click", function (e) { if (e.target === $("modal")) closeModal(); });
+  $("copy").addEventListener("click", function () {
+    var label = $("copy").querySelector("span");
+    function done(t) { label.textContent = t; setTimeout(function () { label.textContent = "Скопировать"; }, 1600); }
+    function fallback() {
+      var r = document.createRange(); r.selectNodeContents($("addr"));
+      var s = getSelection(); s.removeAllRanges(); s.addRange(r); done("Выделено");
+    }
+    try { navigator.clipboard.writeText(SUPPORT_EMAIL).then(function () { done("Скопировано"); }, fallback); } catch (e) { fallback(); }
+  });
+
+  var m = /^#slide-(\d+)$/.exec(location.hash);
+  if (m && +m[1] >= 1 && +m[1] <= N) { cur = +m[1] - 1; slides[0].classList.remove("active"); slides[cur].classList.add("active"); }
+  window.addEventListener("hashchange", function () {
+    var h = /^#slide-(\d+)$/.exec(location.hash);
+    if (h && +h[1] - 1 !== cur) go(+h[1] - 1);
+  });
+  ui();
+})();
+</script>
+</body></html>
